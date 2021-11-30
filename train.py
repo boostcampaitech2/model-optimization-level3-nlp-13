@@ -19,7 +19,8 @@ from src.model import Model
 from src.trainer import TorchTrainer
 from src.utils.common import get_label_counts, read_yaml
 from src.utils.torch_utils import check_runtime, model_info
-import timm
+# import timm
+import torchvision
 
 def train(
     model_config: Dict[str, Any],
@@ -44,7 +45,9 @@ def train(
     #     )
     # model_instance.model.to(device)
 
-    model_instance = timm.create_model('mobilenetv3_small_100', pretrained=True).to(device)
+
+    model_instance = torchvision.models.mobilenet_v3_large(pretrained=True, width_mult=1.0,  reduced_tail=False, dilated=False)
+    model_instance.to(device)
     # Create dataloader
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
@@ -89,9 +92,9 @@ def train(
     )
 
     # evaluate model with test set
-    model_instance.model.load_state_dict(torch.load(model_path))
+    model_instance.load_state_dict(torch.load(model_path))
     test_loss, test_f1, test_acc = trainer.test(
-        model=model_instance.model, test_dataloader=val_dl if val_dl else test_dl
+        model=model_instance, test_dataloader=val_dl if val_dl else test_dl
     )
     return test_loss, test_f1, test_acc
 
@@ -131,4 +134,3 @@ if __name__ == "__main__":
         fp16=data_config["FP16"],
         device=device,
     )
-
