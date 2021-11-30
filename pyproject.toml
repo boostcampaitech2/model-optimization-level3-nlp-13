@@ -1,17 +1,11 @@
 [tool.poetry]
-name = "lv3-clue-optimization"
+name = "model-optimization-level3-nlp-13"
 version = "0.1.0"
-description = "Optimization with CV model"
-authors = ["Team-CLUE"]
+description = ""
+authors = ["KyungHyunLim <lkh1075@yonsei.ac.kr>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-torch = "^1.10.0"
-wandb = "^0.12.7"
-scikit-learn = "^1.0.1"
-tqdm = "^4.62.3"
-torchvision = "^0.11.1"
-timm = "^0.4.12"
 
 [tool.poetry.dev-dependencies]
 
