@@ -36,18 +36,10 @@ def train(
     with open(os.path.join(log_dir, "model.yml"), "w") as f:
         yaml.dump(model_config, f, default_flow_style=False)
 
-    # model_instance = Model(model_config, verbose=True)
     model_path = os.path.join(log_dir, "best.pt")
-    print(f"Model save path: {model_path}")
-    # if os.path.isfile(model_path):
-    #     model_instance.model.load_state_dict(
-    #         torch.load(model_path, map_location=device)
-    #     )
-    # model_instance.model.to(device)
-
-
-    model_instance = torchvision.models.mobilenet_v3_large(pretrained=True, width_mult=1.0,  reduced_tail=False, dilated=False)
+    model_instance = torchvision.models.mobilenet_v3_large(pretrained=True)#, width_mult=1.0,  reduced_tail=False, dilated=False)
     model_instance.to(device)
+    
     # Create dataloader
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
