@@ -148,7 +148,7 @@ if __name__ == "__main__":
         "--dst", type=str, help="destination path for submit",
         default=os.environ.get('SM_OUTPUT_DATA_DIR')
     )
-    parser.add_argument("--model_dir", type=str, help="Saved model root directory which includes 'best.pt', 'data.yml', and, 'model.yml'", default='/opt/ml/code/exp/latest')
+    parser.add_argument("--model_dir", type=str, help="Saved model root directory which includes 'best.pt', 'data.yml', and, 'model.yml'", default='/opt/ml/git/model-optimization-level3-nlp-13/exp/latest')
     parser.add_argument("--weight_name", type=str, help="Model weight file name. (best.pt, best.ts, ...)", default="best.pt")
     parser.add_argument(
         "--img_root",
@@ -173,11 +173,12 @@ if __name__ == "__main__":
     if args.weight.endswith("ts"):
         model = torch.jit.load(args.weight)
     else:
-        model_instance = Model(args.model_config, verbose=True)
-        model_instance.model.load_state_dict(
+        model_instance = timm.create_model('mobilenetv3_small_100', pretrained=True).to(device)
+        #model_instance = Model(args.model_config, verbose=True)
+        model_instance.load_state_dict(
             torch.load(args.weight, map_location=torch.device("cpu"))
         )
-        model = model_instance.model
+        model = model_instance
 
     # inference
     inference(model, dataloader, args.dst, t0)
