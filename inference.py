@@ -14,16 +14,14 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Resize
 from tqdm import tqdm
-import timm
 
 from src.augmentation.policies import simple_augment_test
 from src.model import Model
 from src.utils.common import read_yaml
 
-if torch.__version__ >= "1.8.1":
-    from torch import profiler
-else:
-    from torch.autograd import profiler
+from torch.autograd import profiler
+import torchvision
+
 
 CLASSES = [
     "Metal",
@@ -156,6 +154,11 @@ if __name__ == "__main__":
         help="image folder root. e.g) 'data/test'",
         default='/opt/ml/data/test'
     )
+    parser.add_argument(
+        "--model_path",
+        type=str,
+    )
+
     args = parser.parse_args()
     assert args.model_dir != '' and args.img_root != '', "'--model_dir' and '--img_root' must be provided."
 
@@ -170,15 +173,15 @@ if __name__ == "__main__":
     dataloader = get_dataloader(img_root=args.img_root, data_config=args.data_config)
 
     # prepare model
-    if args.weight.endswith("ts"):
-        model = torch.jit.load(args.weight)
-    else:
-        model_instance = Model(args.model_config, verbose=True)
-        model_instance.model.load_state_dict(
-            torch.load(args.weight, map_location=torch.device("cpu"))
+
+    model = torchvision.models.mobilenet_v3_large(pretrained=True)
+
+    model.load_state_dict(
+                torch.load("/opt/ml/code/exp/latest/best.pt")
         )
-        model = model_instance.model
+    # model_instance = torch.load(args.model_path)
 
     # inference
     inference(model, dataloader, args.dst, t0)
 
+    
