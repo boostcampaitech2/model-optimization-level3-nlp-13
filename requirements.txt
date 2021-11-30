@@ -10,5 +10,6 @@ pre-commit==2.9.3
 split-folders==0.4.3
 ptflops
 timm
+wandb
 # torch==1.6.0
 # torchvision==0.7.0
