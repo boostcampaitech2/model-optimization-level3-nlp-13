@@ -1,0 +1,1 @@
+python train.py --model configs/model/mobilenetv3.yaml --data configs/data/taco.yaml --eval "/opt/ml/code/exp/latest/best.pt" --savefolder_name 'eval_test'
