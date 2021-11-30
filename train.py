@@ -89,9 +89,9 @@ def train(
     )
 
     # evaluate model with test set
-    model_instance.model.load_state_dict(torch.load(model_path))
+    model_instance.load_state_dict(torch.load(model_path))
     test_loss, test_f1, test_acc = trainer.test(
-        model=model_instance.model, test_dataloader=val_dl if val_dl else test_dl
+        model=model_instance, test_dataloader=val_dl if val_dl else test_dl
     )
     return test_loss, test_f1, test_acc
 
