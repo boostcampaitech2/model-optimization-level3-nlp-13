@@ -21,6 +21,9 @@ from tqdm import tqdm
 
 from src.utils.torch_utils import save_model
 
+import wandb
+wandb.init(project="model_opti")
+
 
 def _get_n_data_from_dataloader(dataloader: DataLoader) -> int:
     """Get a number of data in dataloader.
@@ -163,18 +166,30 @@ class TorchTrainer:
                 gt += labels.to("cpu").tolist()
 
                 running_loss += loss.item()
+
+                train_acc = (correct / total) * 100
+                train_f1 = f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0)
                 pbar.update()
                 pbar.set_description(
                     f"Train: [{epoch + 1:03d}] "
                     f"Loss: {(running_loss / (batch + 1)):.3f}, "
-                    f"Acc: {(correct / total) * 100:.2f}% "
-                    f"F1(macro): {f1_score(y_true=gt, y_pred=preds, labels=label_list, average='macro', zero_division=0):.2f}"
+                    f"Acc: {train_acc:.2f}% "
+                    f"F1(macro): {train_f1:.2f}"
                 )
             pbar.close()
 
             _, test_f1, test_acc = self.test(
                 model=self.model, test_dataloader=val_dataloader
             )
+
+            wandb.log({
+                    "train acc" : train_acc, 
+                    "train f1": train_f1,
+                    "validation acc" : test_acc, 
+                    "validation f1": test_f1,
+                    "epoch" : epoch
+                })
+
             if best_test_f1 > test_f1:
                 continue
             best_test_acc = test_acc
