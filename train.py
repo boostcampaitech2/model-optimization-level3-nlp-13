@@ -38,6 +38,8 @@ def train(
 
     model_path = os.path.join(log_dir, "best.pt")
     model_instance = torchvision.models.mobilenet_v3_large(pretrained=True)#, width_mult=1.0,  reduced_tail=False, dilated=False)
+    if not args.resume_train == "":
+        model_instance.load_state_dict(torch.load(args.resume_train))
     model_instance.to(device)
     
     # Create dataloader
@@ -110,6 +112,8 @@ if __name__ == "__main__":
     parser.add_argument("--savefolder_name", type=str)
     parser.add_argument("--train", action = "store_true")
     parser.add_argument("--eval", type=str, default="")
+    parser.add_argument("--resume_train", type=str, default="")
+
 
     args = parser.parse_args()
 
