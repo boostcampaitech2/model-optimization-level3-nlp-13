@@ -44,14 +44,14 @@ def train(
     #     )
     # model_instance.model.to(device)
 
-    model_instance = timm.create_model('mobilenetv3_small_100', pretrained=True).to(device)
+    model_instance = timm.create_model('mobilenetv3_small_075', pretrained=True).to(device)
     # Create dataloader
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
     # Create optimizer, scheduler, criterion
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.Adam(
         #model_instance.model.parameters(), lr=data_config["INIT_LR"], momentum=0.9
-        model_instance.parameters(), lr=data_config["INIT_LR"], momentum=0.9
+        model_instance.parameters(), lr=data_config["INIT_LR"]#, momentum=0.9
     )
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer=optimizer,
