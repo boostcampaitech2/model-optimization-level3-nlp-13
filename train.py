@@ -114,6 +114,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data", default="configs/data/taco.yaml", type=str, help="data config"
     )
+    
+    parser.add_argument("--savefolder_name", type=str)
     parser.add_argument("--train", action = "store_true")
     parser.add_argument("--eval", type=str, default="")
 
@@ -125,7 +127,7 @@ if __name__ == "__main__":
     data_config["DATA_PATH"] = os.environ.get("SM_CHANNEL_TRAIN", data_config["DATA_PATH"])
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    log_dir = os.environ.get("SM_MODEL_DIR", os.path.join("exp", 'latest'))
+    log_dir = os.environ.get("SM_MODEL_DIR", os.path.join("exp", args.savefolder_name))
 
     if os.path.exists(log_dir): 
         modified = datetime.fromtimestamp(os.path.getmtime(log_dir + '/best.pt'))
