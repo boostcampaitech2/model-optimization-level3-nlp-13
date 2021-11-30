@@ -85,17 +85,21 @@ def train(
         model_path=model_path,
         verbose=1,
     )
+
+    if args.train == True:
     best_acc, best_f1 = trainer.train(
         train_dataloader=train_dl,
         n_epoch=data_config["EPOCHS"],
         val_dataloader=val_dl if val_dl else test_dl,
     )
 
+    if not args.eval == "":
     # evaluate model with test set
-    model_instance.load_state_dict(torch.load(model_path))
+        model_instance.load_state_dict(torch.load(args.eval))
     test_loss, test_f1, test_acc = trainer.test(
-        model=model_instance, test_dataloader=val_dl if val_dl else test_dl
+            model=model_instance, test_dataloader=val_dl
     )
+
     return test_loss, test_f1, test_acc
 
 
@@ -110,6 +114,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data", default="configs/data/taco.yaml", type=str, help="data config"
     )
+    parser.add_argument("--train", action = "store_true")
+    parser.add_argument("--eval", type=str, default="")
+
     args = parser.parse_args()
 
     model_config = read_yaml(cfg=args.model)
