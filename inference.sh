@@ -1,0 +1,1 @@
+python inference.py --model_dir /opt/ml/code/exp/latest2 --weight best.pt --img_root /opt/ml/data/test/
