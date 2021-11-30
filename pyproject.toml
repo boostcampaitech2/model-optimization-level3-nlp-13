@@ -11,6 +11,7 @@ wandb = "^0.12.7"
 scikit-learn = "^1.0.1"
 tqdm = "^4.62.3"
 torchvision = "^0.11.1"
+timm = "^0.4.12"
 
 [tool.poetry.dev-dependencies]
 

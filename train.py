@@ -19,7 +19,7 @@ from src.model import Model
 from src.trainer import TorchTrainer
 from src.utils.common import get_label_counts, read_yaml
 from src.utils.torch_utils import check_runtime, model_info
-
+import timm
 
 def train(
     model_config: Dict[str, Any],
@@ -35,21 +35,23 @@ def train(
     with open(os.path.join(log_dir, "model.yml"), "w") as f:
         yaml.dump(model_config, f, default_flow_style=False)
 
-    model_instance = Model(model_config, verbose=True)
+    # model_instance = Model(model_config, verbose=True)
     model_path = os.path.join(log_dir, "best.pt")
     print(f"Model save path: {model_path}")
-    if os.path.isfile(model_path):
-        model_instance.model.load_state_dict(
-            torch.load(model_path, map_location=device)
-        )
-    model_instance.model.to(device)
+    # if os.path.isfile(model_path):
+    #     model_instance.model.load_state_dict(
+    #         torch.load(model_path, map_location=device)
+    #     )
+    # model_instance.model.to(device)
 
+    model_instance = timm.create_model('mobilenetv3_small_100', pretrained=True).to(device)
     # Create dataloader
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
     # Create optimizer, scheduler, criterion
     optimizer = torch.optim.SGD(
-        model_instance.model.parameters(), lr=data_config["INIT_LR"], momentum=0.9
+        #model_instance.model.parameters(), lr=data_config["INIT_LR"], momentum=0.9
+        model_instance.parameters(), lr=data_config["INIT_LR"], momentum=0.9
     )
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer=optimizer,
@@ -71,7 +73,7 @@ def train(
 
     # Create trainer
     trainer = TorchTrainer(
-        model=model_instance.model,
+        model=model_instance,
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,

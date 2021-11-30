@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import Resize
 from tqdm import tqdm
+import timm
 
 from src.augmentation.policies import simple_augment_test
 from src.model import Model
