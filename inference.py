@@ -174,12 +174,15 @@ if __name__ == "__main__":
 
     # prepare model
 
-    model = torchvision.models.mobilenet_v3_large(pretrained=True)
+    # model = torchvision.models.mobilenet_v3_large(pretrained=True)
 
-    model.load_state_dict(
-                torch.load("/opt/ml/code/exp/latest/best.pt")
-        )
-    # model_instance = torch.load(args.model_path)
+    # model.load_state_dict(
+    #             torch.load("/opt/ml/code/exp/latest/best.pt")
+    #     )
+    # model = torch.load("/opt/ml/code/exp/ghostnet/model.pt")
+    model = torch.hub.load('huawei-noah/ghostnet', 'ghostnet_1x', pretrained=True)
+    model.load_state_dict(torch.load("/opt/ml/code/exp/ghostnet/best.pt"))
+
 
     # inference
     inference(model, dataloader, args.dst, t0)
