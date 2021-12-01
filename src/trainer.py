@@ -88,6 +88,7 @@ class TorchTrainer:
         optimizer: optim.Optimizer,
         scheduler,
         model_save_path: str,
+        name,
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
@@ -110,6 +111,7 @@ class TorchTrainer:
         self.scaler = scaler
         self.verbose = verbose
         self.device = device
+        wandb.run.name = name
 
   
     def train_one_epoch(

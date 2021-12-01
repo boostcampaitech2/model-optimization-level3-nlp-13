@@ -78,6 +78,7 @@ def train(
         device=device,
         model_save_path=model_path,
         verbose=1,
+        name = args.savefolder_name
     )
 
     if args.train == True:
