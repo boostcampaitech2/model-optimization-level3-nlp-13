@@ -87,7 +87,7 @@ class TorchTrainer:
         criterion: nn.Module,
         optimizer: optim.Optimizer,
         scheduler,
-        model_path: str,
+        model_save_path: str,
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
@@ -103,7 +103,7 @@ class TorchTrainer:
         """
 
         self.model = model
-        self.model_path = model_path
+        self.model_path = model_save_path
         self.criterion = criterion
         self.optimizer = optimizer
         self.scheduler = scheduler

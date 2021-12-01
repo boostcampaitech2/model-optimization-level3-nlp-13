@@ -76,23 +76,23 @@ def train(
         scheduler=scheduler,
         scaler=scaler,
         device=device,
-        model_path=model_path,
+        model_save_path=model_path,
         verbose=1,
     )
 
     if args.train == True:
-    best_acc, best_f1 = trainer.train(
-        train_dataloader=train_dl,
-        n_epoch=data_config["EPOCHS"],
-        val_dataloader=val_dl if val_dl else test_dl,
-    )
+        best_acc, best_f1 = trainer.train(
+            train_dataloader=train_dl,
+            n_epoch=data_config["EPOCHS"],
+            val_dataloader=val_dl if val_dl else test_dl,
+        )
 
     if not args.eval == "":
     # evaluate model with test set
         model_instance.load_state_dict(torch.load(args.eval))
-    test_loss, test_f1, test_acc = trainer.test(
+        test_loss, test_f1, test_acc = trainer.test(
             model=model_instance, test_dataloader=val_dl
-    )
+        )
 
     return test_loss, test_f1, test_acc
 
