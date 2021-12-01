@@ -125,11 +125,13 @@ if __name__ == "__main__":
     log_dir = os.environ.get("SM_MODEL_DIR", os.path.join("exp", args.savefolder_name))
     os.makedirs(log_dir, exist_ok=True)
 
-    import timm
+    # models = timm.list_models(pretrained=True)
     
-    models = timm.list_models(pretrained=True)
+    with open("/opt/ml/code/model_list.txt") as f:
+        models = f.readlines()
     
-    for model_name in models[2:10]:
+    for model_name in models:
+        model_name = model_name.strip()
         try:
             print(model_name)
             train(
