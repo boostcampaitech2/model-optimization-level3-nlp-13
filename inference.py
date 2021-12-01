@@ -23,6 +23,7 @@ from torch.autograd import profiler
 import torchvision
 
 
+
 CLASSES = [
     "Metal",
     "Paper",
@@ -67,7 +68,7 @@ def get_dataloader(img_root: str, data_config: str) -> DataLoader:
 
 
 @torch.no_grad()
-def inference(model, dataloader, dst_path: str, t0: float) -> None:
+def inference(model, dataloader, dst_path: str, t0: float, model_name, device) -> None:
     """Run inference with given model and dataloader.
 
     Args:
@@ -129,15 +130,20 @@ def inference(model, dataloader, dst_path: str, t0: float) -> None:
         result["inference"][fname[0]] = CLASSES[int(pred.detach())]
         result["time"]["inference"][fname[0]] = t_inference
 
+
+    all_time = time.monotonic() - t0
+    inference_time = time_measure_inference
     result["time"]["profile"]["cuda"] = cuda_time
     result["time"]["profile"]["cpu"] = cpu_time
-    result["time"]["runtime"]["all"] = time.monotonic() - t0
-    result["time"]["runtime"]["inference_only"] = time_measure_inference
+    result["time"]["runtime"]["all"] = all_time
+    result["time"]["runtime"]["inference_only"] = inference_time
 
-    j = json.dumps(result, indent=4)
-    save_path = os.path.join(dst_path, "output.csv")
-    with open(save_path, "w") as outfile:
-        json.dump(result, outfile)
+    # j = json.dumps(result, indent=4)
+    # save_path = os.path.join(dst_path, f"{model_name}.csv")
+    # with open(save_path, "w") as outfile:
+    #     json.dump(result, outfile)
+
+    return all_time, inference_time
 
 
 if __name__ == "__main__":
