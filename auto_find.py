@@ -129,13 +129,16 @@ if __name__ == "__main__":
     
     models = timm.list_models(pretrained=True)
     
-    for model_name in models[:2]:
-
-        print(model_name)
-        train(
-            model_name = model_name,
-            data_config=data_config,
-            log_dir=log_dir,
-            fp16=data_config["FP16"],
-            device=device,
-        )
+    for model_name in models[2:10]:
+        try:
+            print(model_name)
+            train(
+                model_name = model_name,
+                data_config=data_config,
+                log_dir=log_dir,
+                fp16=data_config["FP16"],
+                device=device,
+            )
+        except Exception as e:                             # 예외가 발생했을 때 실행됨
+            print('예외가 발생했습니다.', e)
+            wandb.finish()
