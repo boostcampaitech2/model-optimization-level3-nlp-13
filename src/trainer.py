@@ -22,7 +22,7 @@ from tqdm import tqdm
 from src.utils.torch_utils import save_model
 
 import wandb
-wandb.init(project="model_opti")
+
 
 
 def _get_n_data_from_dataloader(dataloader: DataLoader) -> int:
@@ -111,6 +111,7 @@ class TorchTrainer:
         self.scaler = scaler
         self.verbose = verbose
         self.device = device
+        wandb.init(project="model_opti")
         wandb.run.name = name
 
   
