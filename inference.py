@@ -21,7 +21,7 @@ from src.utils.common import read_yaml
 
 from torch.autograd import profiler
 import torchvision
-
+import timm
 
 CLASSES = [
     "Metal",
@@ -174,14 +174,18 @@ if __name__ == "__main__":
 
     # prepare model
 
-    model = torchvision.models.mobilenet_v3_large(pretrained=True)
+    # timm
+    model = timm.create_model('mnasnet_100', pretrained=True)
+    model.load_state_dict(torch.load("/opt/ml/code/exp/latest/mnasnet_75.pt"))
+    
+    # torchvision
+    # model = torchvision.models.mobilenet_v3_large(pretrained=False)
+    # model.load_state_dict(
+    #             torch.load("/opt/ml/code/exp/latest/best.pt")
+    #     )
 
-    model.load_state_dict(
-                torch.load("/opt/ml/code/exp/latest/best.pt")
-        )
+    # 단순로드
     # model_instance = torch.load(args.model_path)
 
     # inference
     inference(model, dataloader, args.dst, t0)
-
-    
