@@ -25,6 +25,9 @@ import time
 import wandb
 from inference import inference, get_dataloader
 
+import torch
+import gc
+
 def train(
             model_name: Dict[str, Any],
             data_config: Dict[str, Any],
@@ -105,6 +108,8 @@ def train(
                     "inference_time": inference_time,
                 })
     wandb.finish()
+    gc.collect()
+    torch.cuda.empty_cache()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train model.")
@@ -126,10 +131,10 @@ if __name__ == "__main__":
     os.makedirs(log_dir, exist_ok=True)
 
     # models = timm.list_models(pretrained=True)
-    
+
     with open("/opt/ml/code/model_list.txt") as f:
         models = f.readlines()
-    
+
     for model_name in models:
         model_name = model_name.strip()
         try:
@@ -144,3 +149,5 @@ if __name__ == "__main__":
         except Exception as e:                             # 예외가 발생했을 때 실행됨
             print('예외가 발생했습니다.', e)
             wandb.finish()
+            gc.collect()
+            torch.cuda.empty_cache()
