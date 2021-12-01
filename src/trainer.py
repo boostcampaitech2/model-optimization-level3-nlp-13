@@ -89,6 +89,7 @@ class TorchTrainer:
         scheduler,
         model_save_path: str,
         name,
+        save_folder,
         scaler=None,
         device: torch.device = "cpu",
         verbose: int = 1,
@@ -111,6 +112,7 @@ class TorchTrainer:
         self.scaler = scaler
         self.verbose = verbose
         self.device = device
+        self.save_folder = save_folder
         wandb.init(project="model_opti")
         wandb.run.name = name
 
@@ -324,6 +326,7 @@ class TorchTrainer:
                 data=data,
                 device=self.device,
             )
+            torch.save(self.model, os.path.join(self.save_folder, "model.pt"))
 
         return best_test_acc, best_test_f1
 
