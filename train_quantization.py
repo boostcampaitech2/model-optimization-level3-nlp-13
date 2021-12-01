@@ -9,43 +9,54 @@ from torch import nn
 import torchvision
 import torch.quantization
 import utils
-from train import train_one_epoch, evaluate, load_data
-
+from train_q import train_one_epoch, evaluate, load_data
+import wandb
 
 def main(args):
-    if args.output_dir:
-        utils.mkdir(args.output_dir)
-
-    utils.init_distributed_mode(args)
-    print(args)
-
-    if args.post_training_quantize and args.distributed:
-        raise RuntimeError("Post training quantization example should not be performed "
-                           "on distributed mode")
+    
 
     # Set backend engine to ensure that quantized model runs on the correct kernels
-    if args.backend not in torch.backends.quantized.supported_engines:
-        raise RuntimeError("Quantized backend not supported: " + str(args.backend))
     torch.backends.quantized.engine = args.backend
-
     device = torch.device(args.device)
     torch.backends.cudnn.benchmark = True
 
+
     # Data loading code
-    print("Loading data")
-    train_dir = os.path.join(args.data_path, 'train')
-    val_dir = os.path.join(args.data_path, 'val')
+    # print("Loading data")
+    # train_dir = os.path.join(args.data_path, 'train')
+    # val_dir = os.path.join(args.data_path, 'val')
 
-    dataset, dataset_test, train_sampler, test_sampler = load_data(train_dir, val_dir, args)
-    data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=args.batch_size,
-        sampler=train_sampler, num_workers=args.workers, pin_memory=True)
+    # dataset, dataset_test, train_sampler, test_sampler = load_data(train_dir, val_dir, args)
+    # data_loader = torch.utils.data.DataLoader(
+    #     dataset, batch_size=args.batch_size,
+    #     sampler=train_sampler, num_workers=args.workers, pin_memory=True)
 
-    data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=args.eval_batch_size,
-        sampler=test_sampler, num_workers=args.workers, pin_memory=True)
+    # data_loader_test = torch.utils.data.DataLoader(
+    #     dataset_test, batch_size=args.eval_batch_size,
+    #     sampler=test_sampler, num_workers=args.workers, pin_memory=True)
 
-    print("Creating model", args.model)
+    from src.dataloader import create_dataloader
+    from src.utils.common import get_label_counts, read_yaml
+    import yaml
+    data_config = read_yaml(cfg=args.data)
+
+    data_config["DATA_PATH"] = os.environ.get("SM_CHANNEL_TRAIN", data_config["DATA_PATH"])
+    log_dir = os.environ.get("SM_MODEL_DIR", os.path.join("exp", args.savefolder_name))
+
+    if os.path.exists(log_dir): 
+        modified = datetime.datetime.fromtimestamp(os.path.getmtime(log_dir + '/best.pt'))
+        new_log_dir = os.path.dirname(log_dir) + '/' + modified.strftime("%Y-%m-%d_%H-%M-%S")
+        os.rename(log_dir, new_log_dir)
+    os.makedirs(log_dir, exist_ok=True)
+
+    if args.output_dir:
+        utils.mkdir(args.output_dir)
+
+    with open(os.path.join(log_dir, "data.yml"), "w") as f:
+        yaml.dump(data_config, f, default_flow_style=False)
+
+    data_loader, data_loader_test, _ = create_dataloader(data_config)
+
     # when training quantized models, we always start from a pre-trained fp32 reference model
     model = torchvision.models.quantization.__dict__[args.model](pretrained=True, quantize=args.test_only)
     model.to(device)
@@ -55,9 +66,6 @@ def main(args):
         model.qconfig = torch.quantization.get_default_qat_qconfig(args.backend)
         torch.quantization.prepare_qat(model, inplace=True)
 
-        if args.distributed and args.sync_bn:
-            model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-
         optimizer = torch.optim.SGD(
             model.parameters(), lr=args.lr, momentum=args.momentum,
             weight_decay=args.weight_decay)
@@ -66,11 +74,18 @@ def main(args):
                                                        step_size=args.lr_step_size,
                                                        gamma=args.lr_gamma)
 
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    from src.loss import CustomCriterion
+
+    criterion = CustomCriterion(
+        samples_per_cls=get_label_counts(data_config["DATA_PATH"])
+        if data_config["DATASET"] == "TACO"
+        else None,
+        device=device,
+    )
+
+
     model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
 
     if args.resume:
         checkpoint = torch.load(args.resume, map_location='cpu')
@@ -79,45 +94,58 @@ def main(args):
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
         args.start_epoch = checkpoint['epoch'] + 1
 
-    if args.post_training_quantize:
-        # perform calibration on a subset of the training dataset
-        # for that, create a subset of the training dataset
-        ds = torch.utils.data.Subset(
-            dataset,
-            indices=list(range(args.batch_size * args.num_calibration_batches)))
-        data_loader_calibration = torch.utils.data.DataLoader(
-            ds, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-            pin_memory=True)
-        model.eval()
-        model.fuse_model()
-        model.qconfig = torch.quantization.get_default_qconfig(args.backend)
-        torch.quantization.prepare(model, inplace=True)
-        # Calibrate first
-        print("Calibrating")
-        evaluate(model, criterion, data_loader_calibration, device=device, print_freq=1)
-        torch.quantization.convert(model, inplace=True)
-        if args.output_dir:
-            print('Saving quantized model')
-            if utils.is_main_process():
-                torch.save(model.state_dict(), os.path.join(args.output_dir,
-                           'quantized_post_train_model.pth'))
-        print("Evaluating post-training quantized model")
-        evaluate(model, criterion, data_loader_test, device=device)
-        return
-
     if args.test_only:
         evaluate(model, criterion, data_loader_test, device=device)
         return
 
     model.apply(torch.quantization.enable_observer)
     model.apply(torch.quantization.enable_fake_quant)
-    start_time = time.time()
+    
+    from src.trainer import TorchTrainer
+    
+    model_path = os.path.join(log_dir, "best.pt")
+
+    trainer = TorchTrainer(
+        model=model,
+        criterion=criterion,
+        optimizer=optimizer,
+        scheduler=lr_scheduler,
+        scaler=False, #fp16
+        device=device,
+        model_save_path=model_path,
+        verbose=1,
+    )
+
+    def _get_len_label_from_dataset(dataset) -> int:
+        """Get length of label from dataset.
+
+        Args:
+            dataset: torch dataset
+
+        Returns:
+            A number of label in set.
+        """
+        if isinstance(dataset, torchvision.datasets.ImageFolder) or isinstance(
+            dataset, torchvision.datasets.vision.VisionDataset
+        ):
+            return len(dataset.classes)
+        elif isinstance(dataset, torch.utils.data.Subset):
+            return _get_len_label_from_dataset(dataset.dataset)
+        else:
+            raise NotImplementedError
+
+    num_classes = _get_len_label_from_dataset(data_loader.dataset)
+    label_list = [i for i in range(num_classes)]
+
     for epoch in range(args.start_epoch, args.epochs):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
+       
         print('Starting training for epoch', epoch)
-        train_one_epoch(model, criterion, optimizer, data_loader, device, epoch,
-                        args.print_freq)
+
+        # train_one_epoch(model, criterion, optimizer, data_loader, device, epoch,
+        #                 args.print_freq)
+
+        train_acc, train_f1 = trainer.train_one_epoch(data_loader, label_list)
+
         lr_scheduler.step()
         with torch.no_grad():
             if epoch >= args.num_observer_update_epochs:
@@ -128,15 +156,33 @@ def main(args):
                 model.apply(torch.nn.intrinsic.qat.freeze_bn_stats)
             print('Evaluate QAT model')
 
-            evaluate(model, criterion, data_loader_test, device=device)
+            _, test_f1, test_acc = trainer.eval(
+                        model=model, test_dataloader=data_loader_test, device =device
+                    )
+
+            # evaluate(model, criterion, data_loader_test, device=device)
             quantized_eval_model = copy.deepcopy(model_without_ddp)
             quantized_eval_model.eval()
             quantized_eval_model.to(torch.device('cpu'))
             torch.quantization.convert(quantized_eval_model, inplace=True)
 
             print('Evaluate Quantized model')
-            evaluate(quantized_eval_model, criterion, data_loader_test,
-                     device=torch.device('cpu'))
+            # evaluate(quantized_eval_model, criterion, data_loader_test,
+            #          device=torch.device('cpu'))
+
+            _, test_f1_q, test_acc_q = trainer.eval(
+                        model=quantized_eval_model, test_dataloader=data_loader_test, device =torch.device('cpu')
+                    )
+
+            wandb.log({
+                        "train acc" : train_acc, 
+                        "train f1": train_f1,
+                        "validation acc" : test_acc, 
+                        "validation f1": test_f1,
+                        "validation_q acc" : test_acc_q, 
+                        "validation_q f1": test_f1_q,
+                        "epoch" : epoch
+                    })
 
         model.train()
 
@@ -155,10 +201,6 @@ def main(args):
                 checkpoint,
                 os.path.join(args.output_dir, 'checkpoint.pth'))
         print('Saving models after epoch ', epoch)
-
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    print('Training time {}'.format(total_time_str))
 
 
 def get_args_parser(add_help=True):
@@ -242,12 +284,19 @@ def get_args_parser(add_help=True):
         action="store_true",
     )
 
-    # distributed training parameters
-    parser.add_argument('--world-size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--dist-url',
-                        default='env://',
-                        help='url used to set up distributed training')
+    parser.add_argument(
+        "--data", default="configs/data/taco.yaml", type=str, help="data config"
+    )
+    
+    parser.add_argument("--savefolder_name", type=str)
+    
+    
+    parser.add_argument(
+        "--output_dir", type=str)
+    
+
+
+    
 
     return parser
 
