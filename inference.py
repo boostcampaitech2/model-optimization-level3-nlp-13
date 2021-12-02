@@ -175,8 +175,8 @@ if __name__ == "__main__":
     # prepare model
 
     # timm
-    model = timm.create_model('mnasnet_100', pretrained=True)
-    model.load_state_dict(torch.load("/opt/ml/code/exp/latest/mnasnet_75.pt"))
+    model = timm.create_model('resnet18d', pretrained=False)
+    model.load_state_dict(torch.load("/opt/ml/code/exp/latest/resnet.pt"))
     
     # torchvision
     # model = torchvision.models.mobilenet_v3_large(pretrained=False)
