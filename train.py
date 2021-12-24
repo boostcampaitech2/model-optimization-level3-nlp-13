@@ -19,7 +19,7 @@ from src.model import Model
 from src.trainer import TorchTrainer
 from src.utils.common import get_label_counts, read_yaml
 from src.utils.torch_utils import check_runtime, model_info
-# import timm
+import timm
 import torchvision
 
 def train(
@@ -40,14 +40,16 @@ def train(
     ####모델
     ##################
     model_path = os.path.join(log_dir, "best.pt")
-    model_instance = torchvision.models.mobilenet_v3_large(pretrained=True)#, width_mult=1.0,  reduced_tail=False, dilated=False)
-    if not args.resume_train == "":
-        model_instance.load_state_dict(torch.load(args.resume_train))
+    
+    model_instance = timm.create_model('alexnet', pretrained=False)
+    
+    #/opt/ml/code/exp/latest/resnet_758.pt
+    # if not args.resume_train == "":
+    # model_instance.load_state_dict(torch.load("/opt/ml/code/exp/latest/resnet_758.pt"))
     model_instance.to(device)
     ###########################
     #######################
 
-    
     # Create dataloader
     train_dl, val_dl, test_dl = create_dataloader(data_config)
 
@@ -90,7 +92,7 @@ def train(
 
     if args.train == True:
         best_acc, best_f1 = trainer.train(
-            train_dataloader=train_dl,
+            train_dataloader=val_dl,
             n_epoch=data_config["EPOCHS"],
             val_dataloader=val_dl if val_dl else test_dl,
         )
